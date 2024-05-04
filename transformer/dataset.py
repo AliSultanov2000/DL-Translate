@@ -1,8 +1,5 @@
-import torch.nn as nn
 import torch
 from torch.utils.data import Dataset
-from config import get_config
-
 
 
 # Добавить сюда маску для Decoder
@@ -29,7 +26,7 @@ class BilingualDataset(Dataset):
         return len(self.ds)
 
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> dict:
         """A fully data preparing to dataloader"""
         src_target_pair = self.ds[idx]
         src_text = src_target_pair['translation'][self.src_lang]  # str
@@ -81,6 +78,6 @@ class BilingualDataset(Dataset):
             }
     
 
-def causal_mask(size):
+def causal_mask(size: int) -> torch.tensor:
     mask = torch.triu(torch.ones((1, size, size)), diagonal=1).type(torch.int)
     return mask == 0
