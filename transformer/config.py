@@ -8,6 +8,7 @@ def get_config() -> dict:
         "lr": 10**-4,
         "seq_len": 250,
         "d_model": 512,
+        "temperature": 0.8,
         "datasource": 'opus_books',
         "lang_src": "en",
         "lang_tgt": "ru",
