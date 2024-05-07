@@ -16,6 +16,8 @@ from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
 
+from torch.utils.tensorboard import SummaryWriter
+
 
 
 def get_all_sentences(ds, lang: str):
@@ -97,6 +99,31 @@ def get_ds(config: dict) -> DataLoader | DataLoader | Tokenizer | Tokenizer:
 
 
 
+def save_state(model_filename: str, epoch: int, global_step: int,  model: Transformer, optimizer):
+    """State saving at the end of each epochs"""
+    
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epoch': epoch,
+        'global_step': global_step,
+        }, model_filename)
+
+
+
+def load_saved_state(model_filename: str, model: Transformer, optimizer: torch.optim.Adam):
+    """Load saved state at the beginning of model training"""
+
+    print(f'Preloading model {model_filename}')
+    state = torch.load(model_filename)
+    model.load_state_dict(state['model_state_dict'])
+    optimizer.load_state_dict(state['optimizer_state_dict'])
+    initial_epoch = state['epoch'] + 1
+    global_step = state['global_step']
+    return model, optimizer, initial_epoch, global_step
+
+
+
 def train_model(config: dict) -> None:
     """Training loop for Transformer model"""
     # Define the device
@@ -107,13 +134,14 @@ def train_model(config: dict) -> None:
         print(f"Device name: {torch.cuda.get_device_name(device.index)}")
         print(f"Device memory: {torch.cuda.get_device_properties(device.index).total_memory / 1024 ** 3} GB")
     device = torch.device(device)
-
+    # Tensorboard
+    writer = SummaryWriter(config['experiment_name'])
     # Make sure the weights folder exists
     Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
 
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
     model = get_model(config, tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size()).to(device)
-
+    # Optimizer, loss function to Transformer
     optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
 
@@ -122,17 +150,12 @@ def train_model(config: dict) -> None:
     global_step = 0
     preload = config['preload']
     model_filename = latest_weights_file_path(config) if preload == 'latest' else get_weights_file_path(config, preload) if preload else None
-
+    # If there is saved model, optimizer, initial_epoch, global_step then load it
     if model_filename:
-        print(f'Preloading model {model_filename}')
-        state = torch.load(model_filename)
-        model.load_state_dict(state['model_state_dict'])
-        initial_epoch = state['epoch'] + 1
-        optimizer.load_state_dict(state['optimizer_state_dict'])
-        global_step = state['global_step']
+        model, optimizer, initial_epoch, global_step = load_saved_state(model_filename, model, optimizer)
     else:
         print('No model to preload, starting from scratch')
-
+    # Training loop
     for epoch in range(initial_epoch, config['num_epochs']):
         torch.cuda.empty_cache()
         model.train()
@@ -155,26 +178,26 @@ def train_model(config: dict) -> None:
             loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
 
+            # Log the loss
+            writer.add_scalar('train_loss', loss.item(), global_step)
+            writer.flush()
+
             # Backpropagate the loss
             loss.backward()
 
             # Update the weights
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
-            # Update global epoch state
+            # Update global state
             global_step += 1
 
         # Run validation at the end of every epoch
-        run_validation(model, val_dataloader, device, lambda msg: batch_iterator.write(msg))
-
-        # Save the model at the end of every epoch
+        run_validation(model, val_dataloader, device, lambda msg: batch_iterator.write(msg), 1, epoch, writer)
+        # Save the state at the end of each epoch
         model_filename = get_weights_file_path(config, f"{epoch:02d}")
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'global_step': global_step
-        }, model_filename)
+        save_state(model_filename, epoch, global_step, model, optimizer)
+
+    writer.close()
 
 
 
