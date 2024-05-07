@@ -13,6 +13,7 @@ def translate(sentence: str) -> str:
     device = torch.device(device)
 
     seq_len = config['seq_len']
+    temperature = config['temperature']  # Using in softmax
     tokenizer_src = Tokenizer.from_file(str(Path(config['tokenizer_file'].format(config['lang_src']))))
     tokenizer_tgt = Tokenizer.from_file(str(Path(config['tokenizer_file'].format(config['lang_tgt']))))
     # Transformer acrhitecture
@@ -40,15 +41,17 @@ def translate(sentence: str) -> str:
         output = decoding_outputs[:, -1, :]
         # Project next token
         logits = model.project(output)
+        # Temperature softmax
+        soft_logits = (logits / temperature).softmax(dim=-1)
         # Next token 
-        next_token = logits.argmax(dim=-1)
+        next_token = soft_logits.argmax(dim=-1)
         
         decoder_input = torch.cat([decoder_input, torch.tensor([[next_token]])], dim=1)
         # Break if we predict the end of sentence token
         if next_token.item() == tokenizer_tgt.token_to_id('[EOS]'):
             break
 
-    return tokenizer_tgt.decode(decoder_input[0].tolist())   
+    return tokenizer_tgt.decode(decoder_input[0].tolist())
 
 
 
