@@ -5,12 +5,12 @@ from transformer_model import *
 from inferece import translate
 
 
-
 @torch.no_grad()
-def run_validation(model: Transformer, validation_dataloader, device, print_msg, num_examples=1):
+def run_validation(model: Transformer, validation_dataloader, device, print_msg, num_examples, epoch, writer):
+    """Running validation at the end of each epoch"""
     model.eval()
     count = 0
-
+    
     source_texts = []
     expected = []
     predicted = []
@@ -28,6 +28,7 @@ def run_validation(model: Transformer, validation_dataloader, device, print_msg,
         source_text = batch['src_text'][0]
         target_text = batch['tgt_text'][0]
         model_out_text = translate(source_text)
+
         source_texts.append(source_text)
         expected.append(target_text)
         predicted.append(model_out_text)
@@ -39,15 +40,21 @@ def run_validation(model: Transformer, validation_dataloader, device, print_msg,
         if count == num_examples:
             print_msg('=' * console_width)
             break
-    # Metric for all validation dataset
-    # Compute the char error rate 
-    metric1 = torchmetrics.CharErrorRate()
-    cer = metric1(predicted, expected).item()
-    # Compute the word error rate
-    metric2 = torchmetrics.WordErrorRate()
-    wer = metric2(predicted, expected).item()
-    
-    # Compute the BLEU metric
-    metric3 = torchmetrics.BLEUScore()
-    bleu = metric3(predicted, expected).item()
-    return cer, wer, bleu
+        
+    # Log the data
+    if writer:
+        # Metric for all validation dataset
+        # Compute the char error rate 
+        metric = torchmetrics.CharErrorRate()
+        cer = metric(predicted, expected).item()
+        writer.add_scalar('validation_cer', cer, epoch)
+        writer.flush()
+        # Compute the word error rate
+        metric = torchmetrics.WordErrorRate()
+        wer = metric(predicted, expected).item()
+        writer.add_scalar('validation_wer', wer, epoch)
+        writer.flush()
+        # Compute the BLEU metric
+        metric = torchmetrics.BLEUScore()
+        bleu = metric(predicted, expected).item()
+        writer.add_scalar('validation_bleu', bleu, epoch)
