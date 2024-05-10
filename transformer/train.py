@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import warnings
 
-from validation import run_validation
+from validation import greedy_valid_decode, run_validation
 from transformer_model import *
 from config import get_config, latest_weights_file_path, get_weights_file_path
 from dataset import BilingualDataset, causal_mask
@@ -18,6 +18,10 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from torch.utils.tensorboard import SummaryWriter
 
+
+seed = get_config()['seed']
+torch.seed = seed
+torch.cuda.seed = seed 
 
 
 def get_all_sentences(ds, lang: str):
@@ -101,7 +105,6 @@ def get_ds(config: dict) -> DataLoader | DataLoader | Tokenizer | Tokenizer:
 
 def save_state(model_filename: str, epoch: int, global_step: int,  model: Transformer, optimizer):
     """State saving at the end of each epochs"""
-    
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
@@ -124,16 +127,29 @@ def load_saved_state(model_filename: str, model: Transformer, optimizer: torch.o
 
 
 
-def train_model(config: dict) -> None:
-    """Training loop for Transformer model"""
-    # Define the device
+def number_train_params(model: nn.Module) -> int:
+    """The number of parameters to be trained"""
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+
+def check_train_device(config: dict):
+    """Check torch device to model train"""
     device = config['device']
-    print("Using device to train:", device)
+    print('Using device to train:', device)
 
     if (device == 'cuda'):
         print(f"Device name: {torch.cuda.get_device_name(device.index)}")
         print(f"Device memory: {torch.cuda.get_device_properties(device.index).total_memory / 1024 ** 3} GB")
     device = torch.device(device)
+    return device
+
+
+
+def train_model(config: dict) -> None:
+    """Training loop for Transformer model"""
+    # Define the device
+    device = check_train_device(config)
     # Tensorboard
     writer = SummaryWriter(config['experiment_name'])
     # Make sure the weights folder exists
@@ -142,7 +158,7 @@ def train_model(config: dict) -> None:
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
     model = get_model(config, tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size()).to(device)
     # Optimizer, loss function to Transformer
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'], eps=1e-9)
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
 
     # If the user specified a model to preload before training, load it
@@ -155,6 +171,9 @@ def train_model(config: dict) -> None:
         model, optimizer, initial_epoch, global_step = load_saved_state(model_filename, model, optimizer)
     else:
         print('No model to preload, starting from scratch')
+
+    # Check train params
+    print(f'The number of model parameters for training: {number_train_params(model)}')
     # Training loop
     for epoch in range(initial_epoch, config['num_epochs']):
         torch.cuda.empty_cache()
@@ -165,26 +184,20 @@ def train_model(config: dict) -> None:
             decoder_input = batch['decoder_input'].to(device) # (B, seq_len)
             encoder_mask = batch['encoder_mask'].to(device) # (B, 1, 1, seq_len)
             decoder_mask = batch['decoder_mask'].to(device) # (B, 1, seq_len, seq_len)
-
             # Run the tensors through the encoder, decoder and the projection layer
-            encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
-            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, seq_len, d_model)
-            proj_output = model.project(decoder_output) # (B, seq_len, vocab_size)
-
+            encoder_output = model.encode(encoder_input, encoder_mask)  # (B, seq_len, d_model)
+            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask)  # (B, seq_len, d_model)
+            proj_output = model.project(decoder_output)  # (B, seq_len, vocab_size)
             # Compare the output with the label
-            label = batch['label'].to(device) # (B, seq_len)
-
+            label = batch['label'].to(device)  # (B, seq_len)
             # Compute the loss using a simple cross entropy
             loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
-
             # Log the loss
             writer.add_scalar('train_loss', loss.item(), global_step)
             writer.flush()
-
             # Backpropagate the loss
             loss.backward()
-
             # Update the weights
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
@@ -192,7 +205,7 @@ def train_model(config: dict) -> None:
             global_step += 1
 
         # Run validation at the end of every epoch
-        run_validation(model, val_dataloader, device, lambda msg: batch_iterator.write(msg), 1, epoch, writer)
+        run_validation(config, model, tokenizer_src, tokenizer_tgt, val_dataloader, config['max_len'], lambda msg: batch_iterator.write(msg), 1, epoch, writer)    
         # Save the state at the end of each epoch
         model_filename = get_weights_file_path(config, f"{epoch:02d}")
         save_state(model_filename, epoch, global_step, model, optimizer)
