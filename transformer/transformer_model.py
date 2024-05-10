@@ -24,13 +24,13 @@ class MultiHeadAttentionBlock(nn.Module):
         assert d_model % n_heads == 0, 'd_model is not divisible by h'
     
 
-    def _self_attention(self, key: tensor, query: tensor, value: tensor, mask, dropout: nn.Dropout):
+    def _self_attention(self, key: tensor, query: tensor, value: tensor, mask: tensor, dropout: nn.Dropout):
         # def input: batch x n_head x seq_len x d_model
         attention_score = (query @ key.transpose(3, 2)) / self.d_model ** 0.5    # batch x n_head x seq_len x seq_len
         
         if mask is not None:
             # Write a very low value (indicating -inf) to the positions where mask == 0
-            attention_score.masked_fill_(mask == 0, -1e9)
+            attention_score.masked_fill_(mask == 0, float('-inf'))
 
         attention_score = attention_score.softmax(dim=-1)  # batch x n_head x seq_len x seq_len
         
