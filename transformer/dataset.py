@@ -2,8 +2,6 @@ import torch
 from torch.utils.data import Dataset
 
 
-# Добавить сюда маску для Decoder
-
 class BilingualDataset(Dataset):
     def __init__(self, ds, tokenizer_src, tokenizer_tgt, src_lang, tgt_lang, seq_len):
         super().__init__()
@@ -79,5 +77,6 @@ class BilingualDataset(Dataset):
     
 
 def causal_mask(size: int) -> torch.tensor:
+    """Mask to Masked Selfed Attention in decoder"""
     mask = torch.triu(torch.ones((1, size, size)), diagonal=1).type(torch.int)
     return mask == 0
