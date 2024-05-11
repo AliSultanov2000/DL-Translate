@@ -40,7 +40,7 @@ def greedy_valid_decode(model: Transformer, encoder_input: torch.tensor, encoder
 @torch.no_grad()
 def run_validation(config: dict, model: Transformer, tokenizer_tgt: Tokenizer, validation_dataloader, print_msg, epoch: int, writer):
     """Running validation at the end of each epoch"""
-    device = config['device']
+    device = torch.deivce(config['device'])
     max_len = config['max_len']
     num_examples = config['num_examples']
     temperature = config['temperature']
