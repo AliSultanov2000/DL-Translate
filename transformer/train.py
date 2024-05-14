@@ -78,10 +78,10 @@ def train_val_ds_split(ds_raw):
 
 
 
-def get_ds(config: dict) -> DataLoader | DataLoader | Tokenizer | Tokenizer:
+def get_ds(config: dict):
     """Src, tgt DataLoader, Tokenizer preparing for training loop"""
     ds_raw = load_dataset(f"{config['datasource']}", f"{config['lang_src']}-{config['lang_tgt']}", split='train')
-    
+
     # Build tokenizers
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config['lang_src'])
     tokenizer_tgt = get_or_build_tokenizer(config, ds_raw, config['lang_tgt'])
@@ -182,8 +182,8 @@ def train_model(config: dict) -> None:
         for batch in batch_iterator:
             encoder_input = batch['encoder_input'].to(device) # (b, seq_len)
             decoder_input = batch['decoder_input'].to(device) # (B, seq_len)
-            encoder_mask = batch['encoder_mask'].to(device) # (B, 1, 1, seq_len)
-            decoder_mask = batch['decoder_mask'].to(device) # (B, 1, seq_len, seq_len)
+            encoder_mask = batch['encoder_mask'].to(device)   # (B, 1, 1, seq_len)
+            decoder_mask = batch['decoder_mask'].to(device)   # (B, 1, seq_len, seq_len)
             # Run the tensors through the encoder, decoder and the projection layer
             encoder_output = model.encode(encoder_input, encoder_mask)  # (B, seq_len, d_model)
             decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask)  # (B, seq_len, d_model)
@@ -192,7 +192,7 @@ def train_model(config: dict) -> None:
             label = batch['label'].to(device)  # (B, seq_len)
             # Compute the loss using a simple cross entropy
             loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
-            batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
+            batch_iterator.set_postfix({"Train loss": f"{loss.item():6.3f}"})
             # Log the loss
             writer.add_scalar('train_loss', loss.item(), global_step)
             writer.flush()
@@ -205,9 +205,9 @@ def train_model(config: dict) -> None:
             global_step += 1
 
         # Run validation at the end of every epoch
-        run_validation(config, model, tokenizer_src, tokenizer_tgt, val_dataloader, config['max_len'], lambda msg: batch_iterator.write(msg), 1, epoch, writer)    
+        run_validation(config, model, tokenizer_tgt, val_dataloader, lambda msg: batch_iterator.write(msg), epoch, writer)    
         # Save the state at the end of each epoch
-        model_filename = get_weights_file_path(config, f"{epoch:02d}")
+        model_filename = get_weights_file_path(config, f"{epoch:02d}")  # Str
         save_state(model_filename, epoch, global_step, model, optimizer)
 
     writer.close()

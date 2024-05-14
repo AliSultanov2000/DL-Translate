@@ -169,7 +169,7 @@ class Encoder(nn.Module):
     def __init__(self, features: int, layers: nn.ModuleList):
         super().__init__()
         self.norm = LayerNormalization(features)
-        self.layers = layers  # Layers of encoder block
+        self.layers = layers    # Layers of encoder block
 
 
     def forward(self, x, mask=None):
