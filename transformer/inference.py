@@ -1,5 +1,6 @@
 from transformer_model import *
-from config import get_config, latest_weights_file_path
+from config import get_config
+from weights_path import latest_weights_file_path
 
 from pathlib import Path
 from tokenizers import Tokenizer

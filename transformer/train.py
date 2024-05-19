@@ -4,7 +4,8 @@ import warnings
 
 from validation import greedy_valid_decode, run_validation
 from transformer_model import *
-from config import get_config, latest_weights_file_path, get_weights_file_path
+from config import get_config
+from weights_path import latest_weights_file_path, get_weights_file_path
 from dataset import BilingualDataset, causal_mask
 
 from tqdm import tqdm

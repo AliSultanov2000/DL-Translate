@@ -139,15 +139,18 @@ class ResidualConnection(nn.Module):
 class FeedForwardBlock(nn.Module):
     def __init__(self, d_model: int, d_ff: int, dropout: float) -> None:
         super().__init__()
-        self.linear_1 = nn.Linear(d_model, d_ff) # w1 and b1
-        self.dropout = nn.Dropout(dropout)
-        self.linear_2 = nn.Linear(d_ff, d_model) # w2 and b2
 
-
+        self.ff = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, d_model)
+        )
+    
     def forward(self, x):
         # (batch, seq_len, d_model) --> (batch, seq_len, d_ff) --> (batch, seq_len, d_model)
-        return self.linear_2(self.dropout(torch.relu(self.linear_1(x))))
-    
+        return self.ff(x)
+
 
 
 class EncoderBlock(nn.Module):
@@ -261,7 +264,8 @@ class Transformer(nn.Module):
     def project(self, x):
         # return batch x seq_len x vocab_size
         return self.projection_layer(x)
-    
+
+
 
 def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len: int, d_model: int=512, N: int=6, n_heads: int=8, dropout: float=0.1, d_ff=2048) -> Transformer:
     """The function returns Transformer model without pretrained weights"""
