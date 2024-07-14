@@ -55,7 +55,7 @@ def translate(sentence: str) -> str:
         soft_logits = (logits / temperature).softmax(dim=-1)
         # Next token 
         next_token = soft_logits.argmax(dim=-1)
-        # Concat decoder input
+        # Concat the decoder input
         decoder_input = torch.cat([decoder_input, torch.tensor([[next_token]])], dim=1)
         # Break if we predict the end of sentence token
         if next_token.item() == tgt_eos_idx:
