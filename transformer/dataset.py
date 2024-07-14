@@ -41,7 +41,7 @@ class BilingualDataset(Dataset):
         if enc_num_padding_tokens < 0 or dec_num_padding_tokens < 0:
             raise ValueError('The sentence is too long')
         
-        # Add SOS, EOS, PAD tokens
+        # Add SOS, EOS, PAD tokens 
         encoder_input = torch.cat([
                 self.sos_token,
                 torch.tensor(enc_input_tokens, dtype=torch.int64),
@@ -69,8 +69,8 @@ class BilingualDataset(Dataset):
             'encoder_input': encoder_input,  # seq_len
             'decoder_input': decoder_input,  # seq_len
             'label': label,                  # seq_len
-            'src_text': src_text,            # str
-            'tgt_text': tgt_text,            # str
+            'src_text': src_text,            # dtype: str
+            'tgt_text': tgt_text,            # dtype: str
             "encoder_mask": (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # (1, 1, seq_len)
             "decoder_mask": (decoder_input != self.pad_token).unsqueeze(0).int() & causal_mask(decoder_input.size(0)), # (1, seq_len) & (1, seq_len, seq_len)
             }
