@@ -27,8 +27,8 @@ class BilingualDataset(Dataset):
     def __getitem__(self, idx: int) -> dict:
         """A fully data preparing to dataloader"""
         src_target_pair = self.ds[idx]
-        src_text = src_target_pair['translation'][self.src_lang]   # str
-        tgt_text = src_target_pair['translation'][self.tgt_lang]   # str
+        src_text = src_target_pair['translation'][self.src_lang]   # dtype: str
+        tgt_text = src_target_pair['translation'][self.tgt_lang]   # dtype: str
 
         # Transform the text into tokens
         enc_input_tokens = self.tokenizer_src.encode(src_text).ids
