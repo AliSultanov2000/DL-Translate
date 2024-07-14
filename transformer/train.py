@@ -51,7 +51,6 @@ def get_max_length(ds_raw, config: dict, tokenizer_src: Tokenizer, tokenizer_tgt
     """Function find the max length of each sentence: src, tgt"""
     max_len_src = 0
     max_len_tgt = 0
-
     for item in ds_raw:
         src_ids = tokenizer_src.encode(item['translation'][config['lang_src']]).ids
         tgt_ids = tokenizer_tgt.encode(item['translation'][config['lang_tgt']]).ids
