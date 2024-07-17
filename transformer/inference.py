@@ -51,7 +51,7 @@ def translate(sentence: str) -> str:
         output = decoding_outputs[:, -1, :]
         # Project next token
         logits = model.project(output)
-        # Temperature softmax
+        # Temp softmax
         soft_logits = (logits / temperature).softmax(dim=-1)
         # Next token 
         next_token = soft_logits.argmax(dim=-1)
