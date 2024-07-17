@@ -8,7 +8,7 @@ from tokenizers import Tokenizer
 
 @torch.no_grad()
 def translate(sentence: str) -> str:
-    """Text translation using a transformer"""
+    """Text translation using a transformer model"""
     config = get_config()
     temperature = config['temperature']  # Using in softmax
     seq_len = config['seq_len']    
