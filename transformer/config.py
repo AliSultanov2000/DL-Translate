@@ -1,10 +1,10 @@
 def get_config() -> dict:
     return {
         "device": "cpu",
-        "seed": 17,
-        "batch_size": 15,
+        "seed": 50,
+        "batch_size": 100,
         "num_epochs": 20,
-        "lr": 10**-4,
+        "lr": 10 ** -4,
         "num_examples": 2,
         "console_width": 130,
         "max_len": 250, 
