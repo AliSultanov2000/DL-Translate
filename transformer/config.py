@@ -7,7 +7,7 @@ def get_config() -> dict:
         "lr": 10 ** -4,
         "num_examples": 2,
         "console_width": 130,
-        "max_len": 250, 
+        "max_len": 260, 
         "seq_len": 250,
         "d_model": 512,
         "temperature": 0.8,
