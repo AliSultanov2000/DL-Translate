@@ -1,4 +1,5 @@
 def get_config() -> dict:
+    """Base params"""
     return {
         "device": "cpu",
         "seed": 50,
