@@ -6,6 +6,7 @@ from torch import tensor
 
 
 class MultiHeadAttentionBlock(nn.Module):
+    # Implementation of MHSA
     def __init__(self, n_heads: int, d_model: int, dropout: float):
         super().__init__()
 
