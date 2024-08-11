@@ -42,7 +42,6 @@ def translate(sentence: str) -> str:
     encoder_mask = (encoder_input != src_pad_idx).unsqueeze(0).unsqueeze(0).int().to(device)
     encoder_output = model.encode(encoder_input, encoder_mask)
 
-    # Initialize the decoder input with the sos token
     decoder_input = torch.tensor([tgt_sos_idx]).unsqueeze(0).to(device)
     # Generate the translation word by word
     while decoder_input.size(1) < seq_len:
