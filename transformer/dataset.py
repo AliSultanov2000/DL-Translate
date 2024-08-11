@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class BilingualDataset(Dataset: Dataset):
+class BilingualDataset(Dataset: Dataset) -> None:
     def __init__(self, ds, tokenizer_src, tokenizer_tgt, src_lang, tgt_lang, seq_len):
         super().__init__()
         self.ds = ds
