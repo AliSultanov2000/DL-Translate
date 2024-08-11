@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class BilingualDataset(Dataset):
+class BilingualDataset(Dataset: Dataset):
     def __init__(self, ds, tokenizer_src, tokenizer_tgt, src_lang, tgt_lang, seq_len):
         super().__init__()
         self.ds = ds
@@ -17,7 +17,7 @@ class BilingualDataset(Dataset):
         self.pad_token = torch.tensor([tokenizer_tgt.token_to_id("[PAD]")], dtype=torch.int64)
 
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Length of dataset"""
         return len(self.ds)
 
